@@ -4,8 +4,8 @@
 
 //#define ActiveApp_Sandbox
 //#define ActiveApp_SteeringBehaviors
-#define ActiveApp_CombinedSteering
-//#define ActiveApp_Flocking
+//#define ActiveApp_CombinedSteering
+#define ActiveApp_Flocking
 
 
 //---------- Registered Applications -----------

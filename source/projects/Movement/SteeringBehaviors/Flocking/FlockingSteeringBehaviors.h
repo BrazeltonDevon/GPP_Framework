@@ -16,9 +16,31 @@ private:
 	Flock* m_pFlock = nullptr;
 };
 
+
 //SEPARATION - FLOCKING
 //*********************
+class Separation : public Flee
+{
+public:
+	Separation(Flock* pFlock) :m_pFlock(pFlock) {};
 
+	//Separation Behavior
+	SteeringOutput CalculateSteering(float deltaT, SteeringAgent* pAgent) override;
+
+private:
+	Flock* m_pFlock = nullptr;
+};
 
 //VELOCITY MATCH - FLOCKING
 //************************
+class VelocityMatch : public Flee
+{
+public:
+	VelocityMatch(Flock* pFlock) :m_pFlock(pFlock) {};
+
+	//Velocity Match Behavior
+	SteeringOutput CalculateSteering(float deltaT, SteeringAgent* pAgent) override;
+
+private:
+	Flock* m_pFlock = nullptr;
+};

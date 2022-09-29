@@ -41,7 +41,7 @@ void App_Flocking::Update(float deltaTime)
 
 void App_Flocking::Render(float deltaTime) const
 {
-	RenderWorldBounds(m_TrimWorldSize);
+	//RenderWorldBounds(m_TrimWorldSize);
 
 	m_pFlock->Render(deltaTime);
 
