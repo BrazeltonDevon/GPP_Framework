@@ -4,15 +4,16 @@
 #include "../SteeringAgent.h"
 #include "../Steering/SteeringBehaviors.h"
 #include "../CombinedSteering/CombinedSteeringBehaviors.h"
+#include "../SpacePartitioning/SpacePartitioning.h"
 
 using namespace Elite;
 
 //Constructor & Destructor
 Flock::Flock(
-	int flockSize /*= 50*/, 
-	float worldSize /*= 100.f*/, 
-	SteeringAgent* pAgentToEvade /*= nullptr*/, 
-	bool trimWorld /*= false*/)
+	int flockSize, 
+	float worldSize, 
+	SteeringAgent* pAgentToEvade, 
+	bool trimWorld)
 
 	: m_WorldSize{ worldSize }
 	, m_FlockSize{ flockSize }
@@ -23,8 +24,6 @@ Flock::Flock(
 {
 	m_Agents.resize(m_FlockSize);
 
-	// TODO: initialize the flock and the memory pool
-	// TODO: initialize the flock and the memory pool
 	m_Neighbors.resize(m_Agents.size());
 
 	m_pEvadeBehavior = new Evade();
@@ -34,9 +33,10 @@ Flock::Flock(
 	m_pSeparationBehavior = new Separation(this);
 	m_pVelMatchBehavior = new VelocityMatch(this);
 
-	//m_NrCellRows = 25;
-	//m_NrCellColumns = 25;
-	//m_pCellSpace = new CellSpace(m_WorldSize, m_WorldSize, m_NrCellRows, m_NrCellColumns, m_FlockSize);
+	m_NrCellRows = 15;
+	m_NrCellColumns = 15;
+	m_pCellSpace = new CellSpace(m_WorldSize, m_WorldSize, m_NrCellRows, m_NrCellColumns, m_FlockSize);
+	m_CellSize = m_NeighborhoodRadius;
 
 	SetPrioritySteering();
 	float maxLin{ 20.0f };
@@ -85,7 +85,7 @@ Flock::~Flock()
 
 	SAFE_DELETE(m_pAgentToEvade);
 
-	/*SAFE_DELETE(m_pCellSpace);*/
+	SAFE_DELETE(m_pCellSpace);
 
 	for (auto pAgent : m_Agents)
 	{
@@ -109,8 +109,24 @@ void Flock::Update(float deltaT)
 	{
 		SteeringAgent* agent = m_Agents[i];
 
+		m_NrOfNeighbors = 0;
+		m_Neighbors.clear();
+
 		// Register neighbors 
-		RegisterNeighbors(agent);
+		if (!m_UsePartitioning)
+			RegisterNeighbors(agent);
+		else
+		{
+			m_pCellSpace->RegisterNeighbors(agent, m_CellSize);
+			auto cellneighbors = m_pCellSpace->GetNeighbors();
+			
+			for (auto neighbor : cellneighbors)
+			{
+				m_Neighbors.push_back(neighbor);
+				++m_NrOfNeighbors;
+			}
+
+		}
 
 		// Update agents
 		agent->Update(deltaT);
@@ -120,33 +136,33 @@ void Flock::Update(float deltaT)
 		{
 			//m_pCellSpace->SetSpaceSize(m_WorldSize, m_WorldSize);
 			agent->TrimToWorld(Elite::Vector2(0, 0), Elite::Vector2(m_WorldSize, m_WorldSize));
-			m_pAgentToEvade->TrimToWorld(Elite::Vector2(0, 0), Elite::Vector2(m_WorldSize, m_WorldSize));
 		}
 
-		//// Update cell of agent
-		//if (m_UsePartitioning)
-		//{
-		//	Elite::Vector2 oldPos{ m_oldPositions[i] };
-		//	m_pCellSpace->UpdateAgentCell(agent, oldPos);
-		//}
-
-
-		// set old position to current position (gets the next loop ready)
-		m_oldPositions[i] = agent->GetPosition();
+		// Update cell of agent
+		if (m_UsePartitioning)
+		{
+			Elite::Vector2 oldPos{ m_oldPositions[i] };
+			m_pCellSpace->UpdateAgentCell(agent, oldPos);
+			// set old position to current position (gets the next loop ready)
+			m_oldPositions[i] = agent->GetPosition();
+		}
 	}
+
+	if(m_TrimWorld)
+		m_pAgentToEvade->TrimToWorld(Elite::Vector2(0, 0), Elite::Vector2(m_WorldSize, m_WorldSize));
 		
 }
 
 void Flock::Render(float deltaT)
 {
 	// TODO: render the flock
-	for (auto agent : m_Agents)
+	/*for (auto agent : m_Agents)
 	{
 		if (agent)
 		{
 			agent->Render(deltaT);
 		}
-	}
+	}*/
 
 	m_pAgentToEvade->Render(deltaT);
 
@@ -159,19 +175,25 @@ void Flock::Render(float deltaT)
 	};
 	DEBUGRENDERER2D->DrawPolygon(&points[0], 4, { 1,0,0,1 }, 0.4f);
 
+	// RENDER CELLSPACE
+	if (m_RenderDebug && m_UsePartitioning)
+	{
+		m_pCellSpace->SetDebug(true);
+		m_pCellSpace->RenderCells();
+	}
+
+
 	//DEBUG LINE
 	if (m_Agents.back()->CanRenderBehavior())
 	{
-		DEBUGRENDERER2D->DrawCircle(m_Agents.back()->GetPosition(), m_NeighborhoodRadius, Elite::Color(0, 1, 0), 0.87f);
-		DEBUGRENDERER2D->DrawDirection(m_Agents.back()->GetPosition(), m_Agents.back()->GetLinearVelocity(), 5.0f, { 0,1,0,1 });
 
-		if (!m_UsePartitioning)
-		{
 			for (auto agent : m_Neighbors)
 			{
 				DEBUGRENDERER2D->DrawSolidCircle(agent->GetPosition(), 1.0f, { 0.f,0.f }, { 0.f,1.f,0.f }, -0.8f);
+				DEBUGRENDERER2D->DrawCircle(m_Agents.back()->GetPosition(), m_NeighborhoodRadius, Elite::Color(0, 1, 0), 0.87f);
+				DEBUGRENDERER2D->DrawDirection(m_Agents.back()->GetPosition(), m_Agents.back()->GetLinearVelocity(), 5.0f, { 0,1,0,1 });
 			}
-		}
+
 
 	}
 }
@@ -222,7 +244,7 @@ void Flock::UpdateAndRenderUI()
 	ImGui::Spacing();
 	ImGui::Spacing();
 	// CAN USE SPACIAL PARTITIONING
-	//ImGui::Checkbox("Use Partitioning", &m_UsePartitioning);
+	ImGui::Checkbox("Use Partitioning", &m_UsePartitioning);
 
 	ImGui::Spacing();
 	ImGui::Spacing();
@@ -244,29 +266,29 @@ void Flock::UpdateAndRenderUI()
 
 void Flock::RegisterNeighbors(SteeringAgent* pAgent)
 {
-	m_NrOfNeighbors = 0;
-	m_Neighbors.clear();
 	// for every agent
-	for (auto otherAgent : m_Agents)
-	{
-		// loop over the agents other than the one currently being evaluated
-		if (pAgent != otherAgent)
+
+		for (auto otherAgent : m_Agents)
 		{
-			// if the agent is not the one being evaluated
-			Elite::Vector2 otherPos = otherAgent->GetPosition(), myPos{ pAgent->GetPosition() };
-
-			Elite::Vector2 distanceVector = otherPos - myPos;
-			float distance = distanceVector.Magnitude();
-
-			if (distance <= m_NeighborhoodRadius)
+			// loop over the agents other than the one currently being evaluated
+			if (pAgent != otherAgent)
 			{
-				// is in range
-				m_Neighbors.push_back(otherAgent);
-				++m_NrOfNeighbors;
-				// add to vector container of neighbors and to amount of neighbors
+				// if the agent is not the one being evaluated
+				Elite::Vector2 otherPos = otherAgent->GetPosition(), myPos{ pAgent->GetPosition() };
+
+				Elite::Vector2 distanceVector = otherPos - myPos;
+				float distance = distanceVector.Magnitude();
+
+				if (distance <= m_NeighborhoodRadius)
+				{
+					// is in range
+					m_Neighbors.push_back(otherAgent);
+					++m_NrOfNeighbors;
+					// add to vector container of neighbors and to amount of neighbors
+				}
 			}
 		}
-	}
+
 }
 
 Elite::Vector2 Flock::GetAverageNeighborPos() const

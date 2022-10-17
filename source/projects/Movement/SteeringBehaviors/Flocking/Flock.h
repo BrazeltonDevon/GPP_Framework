@@ -6,6 +6,7 @@ class ISteeringBehavior;
 class SteeringAgent;
 class BlendedSteering;
 class PrioritySteering;
+class CellSpace;
 
 class Flock final
 {
@@ -60,6 +61,10 @@ private:
 
 	BlendedSteering* m_pBlendedSteering = nullptr;
 	PrioritySteering* m_pPrioritySteering = nullptr;
+
+	CellSpace* m_pCellSpace = nullptr;
+	int m_NrCellRows{}, m_NrCellColumns{};
+	float m_CellSize{};
 
 	float* GetWeight(ISteeringBehavior* pBehaviour);
 

@@ -41,13 +41,14 @@ SteeringOutput Separation::CalculateSteering(float deltaT, SteeringAgent* pAgent
 	{
 		// for each neighbor
 		differenceVector = neighbor->GetPosition() - pAgent->GetPosition();
-		float scalar = searchRadius - differenceVector.Magnitude();
+		//float scalar = searchRadius - differenceVector.Magnitude();
+		float scalar = differenceVector.Magnitude();
 
 		linVect += differenceVector.GetNormalized() * scalar;
 	}
 
-	linVect.x /= amountNr;
-	linVect.y /= amountNr;
+	//linVect.x /= amountNr;
+	//linVect.y /= amountNr;
 
 	steering.LinearVelocity = linVect.GetNormalized();
 	steering.LinearVelocity *= pAgent->GetMaxLinearSpeed();
