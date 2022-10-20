@@ -5,7 +5,8 @@
 //#define ActiveApp_Sandbox
 //#define ActiveApp_SteeringBehaviors
 //#define ActiveApp_CombinedSteering
-#define ActiveApp_Flocking
+//#define ActiveApp_Flocking
+#define ActiveApp_GraphTheory
 
 
 //---------- Registered Applications -----------
@@ -24,6 +25,10 @@ typedef App_CombinedSteering CurrentApp;
 #ifdef ActiveApp_Flocking
 #include "projects/Movement/SteeringBehaviors/Flocking/App_Flocking.h"
 typedef App_Flocking CurrentApp;
+#endif
+#ifdef ActiveApp_GraphTheory
+#include "projects/Movement/Pathfinding/GraphTheory/App_GraphTheory.h"
+typedef App_GraphTheory CurrentApp;
 #endif
 
 
