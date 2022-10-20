@@ -35,6 +35,32 @@ void App_GraphTheory::Update(float deltaTime)
 	m_GraphEditor.UpdateGraph(m_pGraph2D);
 	m_pGraph2D->SetConnectionCostsToDistance();
 
+	auto eulerFinder = EulerianPath<GraphNode2D, GraphConnection2D>(m_pGraph2D);
+	auto eulerianity = eulerFinder.IsEulerian();
+
+	/*switch (eulerianity)
+	{
+	case Eulerianity::eulerian:
+		cout << "eulerian" << endl;
+		break;
+	case Eulerianity::semiEulerian:
+		cout << "semi eulerian" << endl;
+		break;
+	case Eulerianity::notEulerian:
+		cout << "not eulerian" << endl;
+	default:
+		break;
+	}*/
+
+	auto path = eulerFinder.FindPath(eulerianity);
+	
+	for (auto node : path)
+	{
+		std::cout << node->GetIndex() << " - ";
+	}
+
+	std::cout << endl;
+
 
 	//------- UI --------
 #ifdef PLATFORM_WINDOWS
